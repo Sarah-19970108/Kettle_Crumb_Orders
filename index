@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en-IE">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kettle &amp; Crumb · Order book (alpha)</title>
+<style>
+:root{--paper:#fafaf7;--card:#fff;--ink:#1f2a2e;--teal:#1f5a54;--teal-d:#16403c;--butter:#f1d27a;--line:#dcd8cc;--red:#b3261e;--redbg:#fdecea;--muted:#5d686c;--ok:#2e6b3a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2,h3{font-family:Georgia,"Times New Roman",serif;font-weight:600;margin:0}
+header{background:var(--teal);color:#fff;padding:18px 24px 16px;display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center;justify-content:space-between}
+header h1{font-size:1.6rem;letter-spacing:.01em}
+header p{margin:0;font-size:.9rem;opacity:.85}
+.scallop{height:12px;background:radial-gradient(circle at 10px -1px,var(--teal) 10px,transparent 11px) 0 0/20px 12px repeat-x}
+.status{font-size:.85rem;display:flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--butter)}
+.dot.off{background:#e8836f}
+main{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:24px;padding:20px 24px 48px;max-width:1200px;margin:0 auto}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:18px}
+form.panel{align-self:start;position:sticky;top:12px}
+@media(max-width:860px){form.panel{position:static}}
+form h2{font-size:1.25rem;margin-bottom:10px}
+label,legend{display:block;font-weight:600;font-size:.9rem;margin:10px 0 3px;padding:0}
+input,select,textarea{width:100%;font:inherit;padding:9px 10px;border:1px solid #b9b4a4;border-radius:4px;background:#fff;color:var(--ink)}
+textarea{min-height:60px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+fieldset{border:2px solid var(--red);border-radius:6px;margin:14px 0 4px;padding:6px 12px 12px;background:var(--redbg)}
+fieldset legend{color:var(--red);font-size:1rem;padding:0 6px}
+.opt{display:flex;gap:8px;align-items:center;font-weight:500;margin:6px 0}
+.opt input{width:auto}
+.allergens{display:none;grid-template-columns:1fr 1fr;gap:0 10px;margin-top:6px}
+.allergens.show{display:grid}
+.err{color:var(--red);font-weight:600;font-size:.9rem;min-height:1.2em;margin:8px 0 0}
+button{font:inherit;cursor:pointer;border-radius:4px;padding:9px 14px;border:1px solid var(--teal);background:var(--teal);color:#fff;font-weight:600}
+button.ghost{background:#fff;color:var(--teal)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:hover:not(:disabled){background:var(--teal-d);color:#fff}
+:focus-visible{outline:3px solid #e0a800;outline-offset:2px}
+form button[type=submit]{width:100%;margin-top:10px;padding:12px;font-size:1.05rem}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:6px}
+.tabs{display:flex;gap:6px}
+.tabs button.on{background:var(--teal);color:#fff}
+.bar select{width:auto}
+.summary{color:var(--muted);font-size:.9rem;margin:2px 0 14px}
+.group-title{font-size:1.1rem;margin:20px 0 8px;display:flex;align-items:center;gap:10px}
+.group-title::after{content:"";flex:1;border-top:2px dotted var(--line)}
+.order{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--line);border-radius:6px;margin-bottom:12px;overflow:hidden}
+.order.prio{border-left-color:var(--teal);border-color:var(--teal);border-left-width:8px;box-shadow:0 2px 0 var(--butter)}
+.top{display:flex;flex-wrap:wrap;gap:6px 12px;justify-content:space-between;padding:12px 14px 4px}
+.top h3{font-size:1.15rem}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:.8rem;padding:2px 9px;border-radius:99px;border:1px solid var(--line);background:#f3f1ea}
+.chip.ev{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:700}
+.due{padding:0 14px 8px;font-weight:600}
+.due .left{color:var(--muted);font-weight:500}
+.due .left.late{color:var(--red);font-weight:700}
+.allergy{background:var(--red);color:#fff;padding:10px 14px;font-weight:800;font-size:1.05rem}
+.allergy small{display:block;font-weight:500;font-size:.85rem}
+.safe{background:#eaf3ec;color:var(--ok);padding:5px 14px;font-size:.85rem;font-weight:600}
+.body{padding:10px 14px;display:grid;gap:3px;font-size:.95rem}
+.body b{font-weight:600}
+.foot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:8px 14px 12px;border-top:1px solid var(--line);font-size:.85rem;color:var(--muted)}
+.foot .acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.step{font-weight:700;color:var(--ink)}
+.empty{padding:28px;text-align:center;color:var(--muted);border:2px dashed var(--line);border-radius:6px}
+.tools{margin-top:24px;display:flex;gap:8px;flex-wrap:wrap}
+@media print{header,.scallop,form,.bar,.tools,.foot .acts{display:none}main{display:block;padding:0}.order{break-inside:avoid}}
+@media(prefers-reduced-motion:no-preference){.order{transition:box-shadow .2s}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Kettle &amp; Crumb · Order book</h1><p>Alpha · one list for phone, email, Instagram, WhatsApp and in-house orders</p></div>
+  <div class="status"><span class="dot" id="dot"></span><span id="net">Saved on this device</span></div>
+</header>
+<div class="scallop" aria-hidden="true"></div>
+
+<main>
+  <form class="panel" id="form" novalidate>
+    <h2>Add an order</h2>
+    <label for="customer">Customer name</label>
+    <input id="customer" required autocomplete="off">
+    <div class="row">
+      <div><label for="phone">Phone or contact</label><input id="phone" autocomplete="off"></div>
+      <div><label for="channel">Came in by</label>
+        <select id="channel"></select></div>
+    </div>
+    <div class="row">
+      <div><label for="event">Order type</label><select id="event"></select></div>
+      <div><label for="due">Needed by</label><input id="due" type="datetime-local" required></div>
+    </div>
+    <label for="item">What they ordered</label>
+    <textarea id="item" required placeholder="e.g. Two sandwich platters, 30 scones"></textarea>
+    <label for="colours">Cake or decoration colours</label>
+    <input id="colours" placeholder="e.g. Ivory with sage green">
+    <label for="diet">Dietary requests</label>
+    <input id="diet" placeholder="e.g. Vegan, halal, gluten-free option">
+
+    <fieldset>
+      <legend>Allergies (must answer)</legend>
+      <label class="opt"><input type="radio" name="allergy" value="none"> No allergies, confirmed with the customer</label>
+      <label class="opt"><input type="radio" name="allergy" value="yes"> Yes, there is an allergy</label>
+      <div class="allergens" id="allergens"></div>
+      <div id="otherWrap" style="display:none"><label for="other">Other allergy or detail</label><input id="other" placeholder="e.g. Severe, carries an EpiPen"></div>
+    </fieldset>
+
+    <label for="takenBy">Taken by</label>
+    <input id="takenBy" placeholder="Your name" required autocomplete="off">
+    <p class="err" id="err" role="alert"></p>
+    <button type="submit">Save order</button>
+  </form>
+
+  <section>
+    <div class="bar">
+      <div class="tabs" role="group" aria-label="Show orders">
+        <button type="button" class="ghost on" data-view="open">Open</button>
+        <button type="button" class="ghost" data-view="done">Done</button>
+      </div>
+      <label for="filterChannel" class="opt" style="margin:0">Channel <select id="filterChannel"></select></label>
+    </div>
+    <p class="summary" id="summary"></p>
+    <div id="list"></div>
+    <div class="tools">
+      <button class="ghost" type="button" id="print">Print van sheet</button>
+      <button class="ghost" type="button" id="reset">Reset demo data</button>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ---------- Settings you can edit ----------
+   PRIORITY_EVENTS: one-off events with tight deadlines. Lower number = more urgent.
+   Any order type listed here is pinned above regular orders and ranked in this order.
+   Within the same rank, the earliest deadline comes first. */
+const PRIORITY_EVENTS = { "Funeral": 1, "Wedding": 2, "Christening": 3, "Communion": 3 };
+const REGULAR_TYPES = ["Regular order", "Corporate catering", "Birthday cake"];
+const CHANNELS = ["Phone", "Email", "Instagram", "WhatsApp", "In house"];
+const ALLERGENS = ["Peanuts", "Tree nuts", "Milk", "Egg", "Gluten", "Sesame", "Soy", "Fish or shellfish"];
+const STEPS = ["New", "Baking", "Packed", "Collected or delivered"];
+const KEY = "kc-orders-v1";
+
+/* ---------- Helpers ---------- */
+const $ = id => document.getElementById(id);
+const h = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
+  }
+  kids.flat().forEach(c => e.append(c ?? ""));
+  return e;
+};
+const rank = o => PRIORITY_EVENTS[o.event] ?? 99;
+const isoLocal = d => new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+const fmt = iso => new Date(iso).toLocaleString("en-IE", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const countdown = iso => {
+  const m = Math.round((new Date(iso) - Date.now()) / 6e4), a = Math.abs(m);
+  const t = a >= 2880 ? Math.floor(a / 1440) + " days" : a >= 60 ? Math.floor(a / 60) + "h " + (a % 60) + "m" : a + " min";
+  return m < 0 ? { text: "overdue by " + t, late: true } : { text: "in " + t, late: m < 360 };
+};
+
+/* ---------- Storage (works offline; falls back to memory if blocked) ---------- */
+let orders = [];
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } };
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(orders)); } catch (e) {} };
+const demo = () => {
+  const t = (hrs) => isoLocal(new Date(Date.now() + hrs * 36e5));
+  const base = { phone: "", colours: "", diet: "", other: "", checked: false, step: 0 };
+  return [
+    { ...base, id: 1, customer: "Family Walsh", phone: "087 555 0142", channel: "Phone", event: "Funeral", due: t(20), item: "Sandwich and scone platters for 60, tea and coffee", allergens: ["Tree nuts", "Peanuts"], other: "Severe: no nuts anywhere, including shared trays", takenBy: "Grace" },
+    { ...base, id: 2, customer: "Sinéad & Pat", channel: "Email", event: "Wedding", due: t(70), item: "Three-tier cake, 90 slices", colours: "Ivory with sage green", diet: "One tier vegan", allergens: [], takenBy: "Niamh" },
+    { ...base, id: 3, customer: "Dunne Accounting", channel: "Instagram", event: "Corporate catering", due: t(30), item: "Breakfast pastries x 25", allergens: ["Gluten"], other: "One coeliac guest", takenBy: "Niamh" },
+    { ...base, id: 4, customer: "Mary O'Brien", channel: "WhatsApp", event: "Birthday cake", due: t(48), item: "Lemon drizzle, 8 inch", colours: "Yellow and white", allergens: [], takenBy: "Tomás" }
+  ];
+};
+orders = load() || demo();
+
+/* ---------- Form ---------- */
+CHANNELS.forEach(c => $("channel").append(h("option", {}, c)));
+$("filterChannel").append(h("option", { value: "" }, "All"));
+CHANNELS.forEach(c => $("filterChannel").append(h("option", {}, c)));
+[...Object.keys(PRIORITY_EVENTS), ...REGULAR_TYPES].forEach(t => $("event").append(h("option", {}, t + (PRIORITY_EVENTS[t] ? " (priority)" : ""))));
+$("event").value = "Regular order";
+ALLERGENS.forEach(a => $("allergens").append(h("label", { class: "opt" }, h("input", { type: "checkbox", name: "al", value: a }), a)));
+const defaultDue = () => { const d = new Date(Date.now() + 864e5); d.setHours(9, 0, 0, 0); return isoLocal(d); };
+$("due").value = defaultDue();
+
+document.querySelectorAll("input[name=allergy]").forEach(r => r.addEventListener("change", () => {
+  const yes = document.querySelector("input[name=allergy]:checked").value === "yes";
+  $("allergens").classList.toggle("show", yes);
+  $("otherWrap").style.display = yes ? "block" : "none";
+}));
+
+$("form").addEventListener("submit", e => {
+  e.preventDefault();
+  const err = m => { $("err").textContent = m; };
+  const ans = document.querySelector("input[name=allergy]:checked");
+  const al = [...document.querySelectorAll("input[name=al]:checked")].map(i => i.value);
+  const other = $("other").value.trim();
+  if (!$("customer").value.trim() || !$("item").value.trim() || !$("takenBy").value.trim() || !$("due").value) return err("Fill in the customer, the order, the deadline and who took it.");
+  if (!ans) return err("Answer the allergy question before saving.");
+  if (ans.value === "yes" && !al.length && !other) return err("Tick the allergen or describe it under Other.");
+  err("");
+  orders.push({
+    id: Date.now(), customer: $("customer").value.trim(), phone: $("phone").value.trim(), channel: $("channel").value,
+    event: $("event").value.replace(" (priority)", ""), due: $("due").value, item: $("item").value.trim(),
+    colours: $("colours").value.trim(), diet: $("diet").value.trim(), allergens: ans.value === "yes" ? al : [],
+    other: ans.value === "yes" ? other : "", takenBy: $("takenBy").value.trim(), checked: false, step: 0
+  });
+  const who = $("takenBy").value;
+  $("form").reset(); $("takenBy").value = who; $("due").value = defaultDue();
+  $("allergens").classList.remove("show"); $("otherWrap").style.display = "none";
+  save(); render();
+});
+
+/* ---------- List ---------- */
+let view = "open";
+document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => {
+  view = b.dataset.view;
+  document.querySelectorAll("[data-view]").forEach(x => x.classList.toggle("on", x === b));
+  render();
+}));
+$("filterChannel").addEventListener("change", render);
+$("print").addEventListener("click", () => window.print());
+$("reset").addEventListener("click", () => { if (confirm("Replace all orders with the demo data?")) { orders = demo(); save(); render(); } });
+
+const hasAllergy = o => o.allergens.length || o.other;
+function card(o) {
+  const cd = countdown(o.due), last = o.step === STEPS.length - 1;
+  const el = h("article", { class: "order" + (rank(o) < 99 ? " prio" : "") },
+    h("div", { class: "top" }, h("h3", {}, o.customer),
+      h("div", { class: "chips" }, rank(o) < 99 ? h("span", { class: "chip ev" }, o.event) : h("span", { class: "chip" }, o.event), h("span", { class: "chip" }, "via " + o.channel))),
+    h("div", { class: "due" }, "Needed " + fmt(o.due) + " ", last ? "" : h("span", { class: "left" + (cd.late ? " late" : "") }, "(" + cd.text + ")")),
+    hasAllergy(o)
+      ? h("div", { class: "allergy" }, "ALLERGY: " + (o.allergens.join(", ") || "see note"), o.other ? h("small", {}, o.other) : "")
+      : h("div", { class: "safe" }, "No allergies, confirmed with customer"),
+    h("div", { class: "body" },
+      h("div", {}, h("b", {}, "Order: "), o.item),
+      o.colours ? h("div", {}, h("b", {}, "Colours: "), o.colours) : "",
+      o.diet ? h("div", {}, h("b", {}, "Dietary: "), o.diet) : "",
+      o.phone ? h("div", {}, h("b", {}, "Contact: "), o.phone) : ""),
+    h("div", { class: "foot" },
+      h("span", {}, "Taken by " + o.takenBy + " · ", h("span", { class: "step" }, STEPS[o.step])),
+      h("div", { class: "acts" },
+        hasAllergy(o) && o.step === 1 ? h("label", { class: "opt", style: "margin:0;color:var(--red)" }, h("input", { type: "checkbox", checked: o.checked, onchange: e => { o.checked = e.target.checked; save(); render(); } }), "Allergy checked before packing") : "",
+        !last ? h("button", { type: "button", disabled: hasAllergy(o) && o.step === 1 && !o.checked, onclick: () => { o.step++; save(); render(); } }, "Move to " + STEPS[o.step + 1]) : "",
+        h("button", { type: "button", class: "ghost", onclick: () => { if (confirm("Delete this order?")) { orders = orders.filter(x => x !== o); save(); render(); } } }, "Delete"))));
+  return el;
+}
+function render() {
+  const f = $("filterChannel").value;
+  const open = orders.filter(o => o.step < STEPS.length - 1);
+  const shown = orders.filter(o => (view === "done" ? o.step === STEPS.length - 1 : o.step < STEPS.length - 1) && (!f || o.channel === f))
+    .sort((a, b) => rank(a) - rank(b) || new Date(a.due) - new Date(b.due));
+  $("summary").textContent = open.length + " open · " + open.filter(o => rank(o) < 99).length + " priority events · " + open.filter(hasAllergy).length + " with allergies";
+  const list = $("list"); list.replaceChildren();
+  if (!shown.length) return list.append(h("div", { class: "empty" }, view === "open" ? "No open orders. Add one on the left." : "Nothing finished yet."));
+  const prio = shown.filter(o => rank(o) < 99), reg = shown.filter(o => rank(o) === 99);
+  if (prio.length) { list.append(h("h2", { class: "group-title" }, "Priority events")); prio.forEach(o => list.append(card(o))); }
+  if (reg.length) { list.append(h("h2", { class: "group-title" }, prio.length ? "Everything else" : "Orders")); reg.forEach(o => list.append(card(o))); }
+}
+render();
+setInterval(render, 6e4);
+
+/* ---------- Offline indicator ---------- */
+const net = () => { $("dot").classList.toggle("off", !navigator.onLine); $("net").textContent = navigator.onLine ? "Saved on this device" : "Offline: still saving on this device"; };
+addEventListener("online", net); addEventListener("offline", net); net();
+</script>
+</body>
+</html>
